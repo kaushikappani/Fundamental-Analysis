@@ -1,6 +1,7 @@
 const { NseIndia } = require("stock-nse-india");
 const ejs = require("ejs");
 const express = require("express");
+const logger = require("logger").createLogger("poc.log")
 var cors = require('cors');
 const nseIndia = new NseIndia()
 
@@ -23,7 +24,9 @@ const corsOpts = {
 app.use(cors(corsOpts))
 
 
-
+app.get("/", (req, res) => {
+    return "all fine"
+})
 
 
 
@@ -32,11 +35,20 @@ app.get('/api', (req, res) => {
     nseIndia.getAllStockSymbols().then(data => {
         res.send(data);
     })
+   
 })
 
 app.get('/api/:symbol', (req, res) => {
-    console.log(req.params.symbol);
+    logger.info(req.params.symbol);
     nseIndia.getEquityCorporateInfo(req.params.symbol).then(data=>{
+        res.send(data);
+    })
+})
+
+
+app.get("/api/details/:symbol", (req, res) => {
+   //logger.info(JSON.stringify(req.headers))
+    nseIndia.getEquityDetails(req.params.symbol).then(data => {
         res.send(data);
     })
 })

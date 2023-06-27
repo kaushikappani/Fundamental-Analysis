@@ -1,13 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import Badge from 'react-bootstrap/Badge';
 import Container from 'react-bootstrap/Container';
 import Table from 'react-bootstrap/Table';
-import Autosuggest from 'react-autosuggest';
 
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 
 import axios from 'axios';
+import SearchBox from '../components/SearchBox';
 
 
 const Home = () => {
@@ -15,7 +14,6 @@ const Home = () => {
     const [data, setData] = useState([]);
     const [coorporateInfo, setCoorporateInfo] = useState([]);
     const [newSymbol, setNewSymbol] = useState('');
-    const [suggestions, setSuggestions] = useState([]);
     const [loading, setLoading] = useState(false);
 
     const addSymbol = () => {
@@ -29,32 +27,6 @@ const Home = () => {
         const { data } = await axios.get("http://localhost:3030/api")
         setSymbols(data);
     }
-
-    const getSuggestions = value => {
-        const inputValue = value.trim().toLowerCase();
-        const inputLength = inputValue.length;
-
-        return inputLength === 0
-            ? []
-            : symbols.filter(symbol => symbol.toLowerCase().includes(inputValue));
-    };
-
-
-    const onSuggestionSelected = (event, { suggestion }) => {
-        setNewSymbol(suggestion);
-    };
-
-    const renderSuggestion = suggestion => <div>{suggestion}</div>;
-
-    const onSuggestionsFetchRequested = ({ value }) => {
-        setSuggestions(getSuggestions(value));
-    };
-
-    const onSuggestionsClearRequested = () => {
-        setSuggestions([]);
-    };
-
-    const getSuggestionValue = suggestion => suggestion;
 
     const getEquityCorporateInfo = async () => {
         setLoading(true);
@@ -87,21 +59,7 @@ const Home = () => {
 
     return (
         <Container>
-            <Autosuggest
-                suggestions={suggestions}
-                onSuggestionsFetchRequested={onSuggestionsFetchRequested}
-                onSuggestionsClearRequested={onSuggestionsClearRequested}
-                getSuggestionValue={getSuggestionValue}
-                renderSuggestion={renderSuggestion}
-                inputProps={{
-                    placeholder: 'Type a symbol',
-                    value: newSymbol,
-                    onChange: (event, { newValue }) => {
-                        setNewSymbol(newValue);
-                    }
-                }}
-                onSuggestionSelected={onSuggestionSelected}
-            />
+            <SearchBox newSymbol = {newSymbol} symbols = {symbols} setNewSymbol = {setNewSymbol} />
 
             <button onClick={addSymbol}>Add</button>
             {coorporateInfo &&
