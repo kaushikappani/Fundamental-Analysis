@@ -15,6 +15,7 @@ const Details = () => {
     const [loading, setLoading] = React.useState(false);
     const [history, setHistory] = React.useState([]);
     const [totals, setTotals] = React.useState([]);
+    
 
     const handleFileChange = (e) => {
         const file = e.target.files[0];
@@ -61,34 +62,62 @@ const Details = () => {
         })
         setNewSymbol("");
     }
-    const refrsh = () => {
-        setLoading(true)
+    const refrsh = async () => {
+        setLoading(true);
         setStockData([]);
-        history.forEach(item => {
-            axios.get("http://localhost:3030/api/details/" + item.symbol).then(data => {
-                setStockData(preVal => {
-                    return [...preVal, { payload: data.data ,quantity:item.quantity}]
-                })
-            }) 
-        })
-        setLoading(false);
-        findTotals();
-    }
-
-
-    const findTotals = () => {
-        console.log("totals started")
         let dayPL = 0;
         let dayPreOpenPL = 0;
-
-        stockData.forEach(item => {
-            dayPL += item.quantity * item.payload.priceInfo.change;
-            dayPreOpenPL += (item.payload.preOpenMarket.IEP - item.payload.priceInfo.previousClose) * item.quantity;
-        })
+        setTotals({ dayPL, dayPreOpenPL });
+        await Promise.all(history.map(item => {
+            return axios.get("http://localhost:3030/api/details/" + item.symbol)
+                .then(data => {
+                    dayPL += data.data.priceInfo.change * item.quantity;
+                    dayPreOpenPL += (data.data.preOpenMarket.IEP - data.data.priceInfo.lastPrice) * item.quantity
+                    setStockData(prevVal => {
+                        return [...prevVal, { payload: data.data, quantity: item.quantity }];
+                    });
+                });
+        })).then(() => {
+            setStockData(prevVal => {
+                return prevVal.sort((a, b) => {
+                    const symbolA = a.payload.metadata.symbol.toUpperCase();
+                    const symbolB = b.payload.metadata.symbol.toUpperCase();
+                    if (symbolA < symbolB) {
+                        return -1;
+                    }
+                    if (symbolA > symbolB) {
+                        return 1;
+                    }
+                    return 0;
+                });
+            });
+        });
         dayPL = parseFloat(dayPL).toFixed(2);
         dayPreOpenPL = parseFloat(dayPreOpenPL).toFixed(2);
-        setTotals({dayPL,dayPreOpenPL})
+        setTotals({ dayPL, dayPreOpenPL })
+
+        setLoading(false);
     }
+
+    const loadData = async () => {
+        await refrsh();
+        //findTotals();
+    }
+
+
+    // const findTotals = () => {
+    //     console.log("totals started")
+    //     let dayPL = 0;
+    //     let dayPreOpenPL = 0;
+
+    //     stockData.forEach(item => {
+    //         dayPL += item.quantity * item.payload.priceInfo.change;
+    //         dayPreOpenPL += (item.payload.preOpenMarket.IEP - item.payload.priceInfo.previousClose) * item.quantity;
+    //     })
+    //     dayPL = parseFloat(dayPL).toFixed(2);
+    //     dayPreOpenPL = parseFloat(dayPreOpenPL).toFixed(2);
+    //     setTotals({dayPL,dayPreOpenPL})
+    // }
     React.useEffect(() => {
         getAllStockSymbols();
     }, [])
@@ -110,7 +139,7 @@ const Details = () => {
             {
                 stockData && (
                     <>
-                        <button onClick={refrsh}>Refresh</button>
+                        <button onClick={loadData}>Refresh</button>
                         <Table striped bordered hover responsive>
 
                             <tr>
@@ -122,6 +151,7 @@ const Details = () => {
                                 <th>Pre-Open price IEP</th>
                                 <th>Quantity</th>
                                 <th>DAY P/L</th>
+                                <th>DAY Pre open Chnage RS</th>
                                 <th>DAY Pre open P/L</th>
 
 
@@ -140,7 +170,8 @@ const Details = () => {
                                             <td>{e.payload.preOpenMarket.IEP}</td>
                                             <td>{e.quantity}</td>
                                             <th>{parseFloat(e.quantity * e.payload.priceInfo.change).toFixed(2)}</th>
-                                            <th>{parseFloat((e.payload.preOpenMarket.IEP - e.payload.priceInfo.previousClose)* e.quantity).toFixed(2)}</th>
+                                            <th style={{ color: (e.payload.preOpenMarket.IEP - e.payload.priceInfo.lastPrice) > 0 ? "green" : "red" }}>{parseFloat(e.payload.preOpenMarket.IEP - e.payload.priceInfo.lastPrice).toFixed(2)}</th>
+                                            <th style={{ color: (e.payload.preOpenMarket.IEP - e.payload.priceInfo.lastPrice) > 0 ? "green" : "red" }}>{parseFloat((e.payload.preOpenMarket.IEP - e.payload.priceInfo.lastPrice)* e.quantity).toFixed(2)}</th>
                                         </tr>
                                         {/* <div style={{display:"flex",justifyContent:"space-between",width:"100%"}}>
                                             <th>Preopen</th>
@@ -163,6 +194,7 @@ const Details = () => {
                                 <td></td>
                                 <td></td>
                                 <td>{totals.dayPL}</td>
+                                <td></td>
                                 <td>{ totals.dayPreOpenPL}</td>
                             </tr>
                         </Table>
